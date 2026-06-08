@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    name: QA (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: PHP-CS-Fixer (check only)
+        run: vendor/bin/php-cs-fixer fix --dry-run --diff --config=.php-cs-fixer.dist.php
+
+      - name: PHPStan
+        run: vendor/bin/phpstan analyse --no-progress --memory-limit=512M
+
+      - name: Smoke test — rule set loads and rules are autoloadable
+        run: |
+          php -r '
+            require "vendor/autoload.php";
+            $rules = [
+              "Xoops\\Rector\\Rules\\DropReferenceFromAssignmentRector",
+              "Xoops\\Rector\\Rules\\MysqlFunctionToXoopsDbRector",
+              "Xoops\\Rector\\Rules\\QueryFToQueryOrExecRector",
+              "Xoops\\Rector\\Rules\\BooleanLiteralStrictComparisonRector",
+              "Xoops\\Rector\\Rules\\RenameLegacyHttpVarsRector",
+              "Xoops\\Rector\\Rules\\RemoveFuncCallRector",
+              "Xoops\\Rector\\Rules\\AddAllowedClassesToUnserializeRector",
+              "Xoops\\Rector\\Rules\\RenameMethodCallByNameRector",
+              "Xoops\\Rector\\Rules\\RenameMethodWithAddedFirstArgRector",
+              "Xoops\\Rector\\Rules\\NewModuleAdminToXmfRector",
+              "Xoops\\Rector\\Rules\\StaticStringCallableToArrayRector",
+              "Xoops\\Rector\\Rules\\GlobalXoopsOptionRector",
+              "Xoops\\Rector\\Rules\\SessionIsRegisteredToIssetRector",
+              "Xoops\\Rector\\Rules\\GetMagicQuotesGpcToFalseRector",
+              "Xoops\\Rector\\Rules\\KernelIncludePathRector",
+              "Xoops\\Rector\\Rules\\UniqidMtRandStrictRector",
+              "Xoops\\Rector\\Rules\\MysqlSelectDbToXoopsDbRector",
+              "Xoops\\Rector\\Rules\\HandlerConstructorDbTypeRector",
+              "Xoops\\Rector\\Rules\\ServerSuperglobalToXmfRequestRector",
+              "Xoops\\Rector\\Rules\\RemoveDeadMytsStripSlashesRector",
+              "Xoops\\Rector\\Rules\\MytsAddSlashesToDbEscapeRector",
+              "Xoops\\Rector\\Rules\\MytsHtmlSpecialCharsToNativeRector",
+            ];
+            foreach ($rules as $r) {
+              if (!class_exists($r)) { fwrite(STDERR, "MISSING: $r\n"); exit(1); }
+            }
+            if (!class_exists("Xoops\\Rector\\Set\\XoopsSetList")) { fwrite(STDERR, "MISSING set list\n"); exit(1); }
+            echo "All ".count($rules)." rules + set list autoload OK\n";
+          '

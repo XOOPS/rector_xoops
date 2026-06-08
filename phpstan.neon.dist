@@ -1,0 +1,12 @@
+# PHPStan configuration for the rector-xoops package.
+parameters:
+    level: 6
+
+    paths:
+        - src
+        - config
+
+    excludePaths:
+        - vendor (?)
+
+    treatPhpDocTypesAsCertain: false
