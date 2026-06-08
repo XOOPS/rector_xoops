@@ -51,12 +51,16 @@ This package is a *rule library* — you also need **Rector itself** and a **`re
 module. Require both (dev only):
 
 ```bash
-composer require --dev rector/rector xoops/rector-xoops
+composer require --dev rector/rector "xoops/rector-xoops:^1.0@alpha"
 ```
+
+> **Pre-release:** the only published version is `1.0.0-alpha1`, so the `@alpha` stability flag is
+> required (it lifts `minimum-stability` for this package only — your project config is untouched).
+> Once a stable `1.0.0` ships, drop it: `composer require --dev xoops/rector-xoops`.
 
 ### Quick-start checklist
 
-1. `composer require --dev rector/rector xoops/rector-xoops`
+1. `composer require --dev rector/rector "xoops/rector-xoops:^1.0@alpha"` (pre-release — see note above)
 2. Create `rector.php` (below) with your paths + `XoopsSetList::XOOPS`.
 3. **Dry-run** — read the diff: `vendor/bin/rector process --dry-run`
 4. **Apply**, then run the module's tests / load it with `XOOPS_DEBUG` on: `vendor/bin/rector process`

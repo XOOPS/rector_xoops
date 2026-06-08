@@ -19,8 +19,12 @@ cleanup, `unserialize` hardening, the PHP 8.5 string-callable fix, and more).
 ## Install
 
 ```bash
-composer require --dev rector/rector xoops/rector-xoops
+composer require --dev rector/rector "xoops/rector-xoops:^1.0@alpha"
 ```
+
+> **Pre-release:** the only published version is `1.0.0-alpha1`. The `@alpha` flag lets Composer
+> install it without changing your project's global `minimum-stability`. Drop the flag once a stable
+> `1.0.0` is tagged: `composer require --dev xoops/rector-xoops`.
 
 ## Use it in a module (recommended)
 
