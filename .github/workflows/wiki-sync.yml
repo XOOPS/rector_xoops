@@ -1,0 +1,64 @@
+name: Sync wiki
+
+# Regenerates the GitHub wiki from docs/TUTORIAL.md (the single source of truth) so the
+# multi-page wiki never drifts from the repo. Edit docs/TUTORIAL.md — never the wiki directly.
+#
+# If the push step 403s, enable: Settings → Actions → General → Workflow permissions →
+# "Read and write permissions".
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - docs/TUTORIAL.md
+      - .github/build-wiki.php
+      - .github/workflows/wiki-sync.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Build wiki pages from docs/TUTORIAL.md
+        run: php .github/build-wiki.php docs/TUTORIAL.md _wiki
+
+      - name: Publish to the wiki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          git clone --depth 1 \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" "$tmp"
+
+          # Replace all top-level pages with the freshly generated set (drops any stale
+          # hand-made pages, so the wiki exactly mirrors docs/TUTORIAL.md).
+          rm -f "$tmp"/*.md
+          cp _wiki/*.md "$tmp"/
+
+          cd "$tmp"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki already up to date — nothing to push."
+          else
+            git commit -m "docs: sync wiki from docs/TUTORIAL.md @ ${GITHUB_SHA::7}"
+            git push
+          fi
