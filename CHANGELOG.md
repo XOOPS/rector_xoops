@@ -59,4 +59,4 @@ across two sets.
   cross-checked against independent reviews. Template-side (`.tpl`) Smarty changes are out of scope —
   this tool is PHP-AST only.
 
-[1.0.0-alpha1]: https://github.com/xoops/rector_xoops/releases/tag/1.0.0-alpha1
+[1.0.0-alpha1]: https://github.com/xoops/rector_xoops/releases/tag/v1.0.0-alpha1
