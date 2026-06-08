@@ -55,7 +55,9 @@ vendor/bin/rector process             # apply
 ## Standalone full-sweep (a whole XOOPS tree)
 
 For one-off modernisation across many modules, use the bundled `rector-xoops.php`,
-which adds `withPhpSets(php84: true)` and an example path/skip list:
+which enables the **default `XOOPS` set only** (not `XOOPS_RISKY`), an example
+path/skip list, and `withPhpSets(php84: true)`. That php84 sweep is **aggressive** —
+lower it to `php82` (XoopsCore27) or `php74` (XoopsCore25) to match the module's PHP floor:
 
 ```bash
 # Always dry-run one module first:
