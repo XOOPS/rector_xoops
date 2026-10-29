@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Xoops\Rector\Rules;
 
 use PhpParser\Node;
+use PhpParser\Node\Expr\ConstFetch;
 use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
+use PhpParser\Node\NullableType;
 use PhpParser\Node\Stmt\Class_;
 use Rector\Rector\AbstractRector;
 use Symplify\RuleDocGenerator\ValueObject\CodeSample\CodeSample;
@@ -52,7 +54,12 @@ final class HandlerConstructorDbTypeRector extends AbstractRector
             if ($param->type === null
                 && $param->var instanceof Node\Expr\Variable
                 && $param->var->name === 'db') {
-                $param->type = new FullyQualified('XoopsDatabase');
+                // `$db = null` needs `?`: an implicitly nullable type is deprecated in PHP 8.4.
+                $type = new FullyQualified('XoopsDatabase');
+                $param->type = $param->default instanceof ConstFetch
+                    && $param->default->name->toLowerString() === 'null'
+                    ? new NullableType($type)
+                    : $type;
                 $changed = true;
             }
         }
