@@ -92,7 +92,10 @@ final class KernelIncludePathRector extends AbstractRector
     private function isXoopsKernel(Expr $receiver): bool
     {
         if ($receiver instanceof Variable) {
-            return $receiver->name === 'xoops';
+            // Untyped `$xoops` is the core convention; one proven to be another class is not.
+            return $receiver->name === 'xoops'
+                && ($this->getType($receiver)->getObjectClassNames() === []
+                    || $this->isObjectType($receiver, new ObjectType('xos_kernel_Xoops2')));
         }
         if ($receiver instanceof ArrayDimFetch) {
             return $receiver->var instanceof Variable && $receiver->var->name === 'GLOBALS'

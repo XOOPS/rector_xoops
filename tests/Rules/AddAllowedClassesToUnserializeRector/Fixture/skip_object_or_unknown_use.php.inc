@@ -56,6 +56,15 @@ function aliased($p)
     return $a;
 }
 
+// In a loop, a read earlier in the body gets the previous iteration's value.
+foreach ($blobs as $blob) {
+    if ($prev !== null) {
+        echo $prev->getVar('id');
+    }
+    $prev = unserialize($blob);
+    is_array($prev);
+}
+
 $opts = unserialize($raw, ['allowed_classes' => ['XoopsObject']]);
 
 ?>

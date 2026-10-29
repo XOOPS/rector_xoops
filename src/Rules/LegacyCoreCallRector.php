@@ -10,6 +10,8 @@ use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\Variable;
+use PhpParser\Node\Identifier;
+use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
 use PhpParser\Node\Scalar\String_;
 use Rector\Rector\AbstractRector;
@@ -41,7 +43,10 @@ final class LegacyCoreCallRector extends AbstractRector
             );
         }
 
+        // Literal names only: isName() also matches `$Database::$getInstance()` by variable name.
         if ($node instanceof StaticCall
+            && $node->class instanceof Name
+            && $node->name instanceof Identifier
             && $this->isName($node->class, 'Database')
             && $this->isName($node->name, 'getInstance')
             && $node->args === []

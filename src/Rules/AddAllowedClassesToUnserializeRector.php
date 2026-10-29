@@ -237,6 +237,8 @@ final class AddAllowedClassesToUnserializeRector extends AbstractRector
 
     /**
      * Reads of `$name` after the assignment in this scope; a later assignment target is not a read.
+     * Inside a loop, a read earlier in the body sees the value on the next iteration, so every
+     * read from the start of the outermost enclosing loop counts.
      *
      * @param list<Variable> $variables
      *
@@ -245,6 +247,13 @@ final class AddAllowedClassesToUnserializeRector extends AbstractRector
     private function laterReads(string $name, Assign $assign, array $variables): array
     {
         $after = $assign->getEndFilePos();
+        for ($p = $this->parents[$assign] ?? null; $p !== null; $p = $this->parents[$p] ?? null) {
+            if ($p instanceof Stmt\For_ || $p instanceof Stmt\Foreach_
+                || $p instanceof Stmt\While_ || $p instanceof Stmt\Do_
+            ) {
+                $after = min($after, $p->getStartFilePos() - 1);
+            }
+        }
         if ($after < 0) {
             return []; // a node built by another rule this run: no position to compare
         }

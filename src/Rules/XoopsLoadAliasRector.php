@@ -61,9 +61,10 @@ final class XoopsLoadAliasRector extends AbstractRector
             return null;
         }
 
+        // XoopsLoad::load() applies its aliases only for exactly 'core' / 'class' (case-sensitive).
         $type = $node->args[1] ?? null;
         if ($type instanceof Arg && !($type->value instanceof String_
-            && in_array(strtolower($type->value->value), ['core', 'class'], true))
+            && in_array($type->value->value, ['core', 'class'], true))
         ) {
             return null;
         }

@@ -50,21 +50,37 @@ final class HandlerConstructorDbTypeRector extends AbstractRector
         }
 
         $changed = false;
-        foreach ($constructor->params as $param) {
+        foreach ($constructor->params as $i => $param) {
             if ($param->type === null
                 && $param->var instanceof Node\Expr\Variable
                 && $param->var->name === 'db') {
                 // `$db = null` needs `?`: an implicitly nullable type is deprecated in PHP 8.4.
                 $type = new FullyQualified('XoopsDatabase');
-                $param->type = $param->default instanceof ConstFetch
-                    && $param->default->name->toLowerString() === 'null'
-                    ? new NullableType($type)
-                    : $type;
+                $nullDefault = $param->default instanceof ConstFetch
+                    && $param->default->name->toLowerString() === 'null';
+                $param->type = $nullDefault ? new NullableType($type) : $type;
+                // Before a required parameter the default is ignored and, once typed `?T`,
+                // deprecated (optional-before-required): keep it nullable but required.
+                if ($nullDefault && $this->hasRequiredAfter($constructor->params, $i)) {
+                    $param->default = null;
+                }
                 $changed = true;
             }
         }
 
         return $changed ? $node : null;
+    }
+
+    /** @param Node\Param[] $params */
+    private function hasRequiredAfter(array $params, int $index): bool
+    {
+        foreach (array_slice($params, $index + 1) as $param) {
+            if ($param->default === null && !$param->variadic) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function getRuleDefinition(): RuleDefinition
