@@ -131,7 +131,7 @@ vendor/bin/rector process /path/to/htdocs/modules/news \
 
 ## 3. Rule reference (what each rule is for)
 
-There are **22 custom rules** in `src/Rules/` plus several **configured built-in** Rector rules. The
+There are **25 custom rules** in `src/Rules/` plus several **configured built-in** Rector rules. The
 **default set** (`config/sets/xoops.php`) registers the behaviour-preserving ones; the **risky set**
 (`config/sets/xoops-risky.php`) the behaviour-changing ones. For the exact, authoritative list, read
 the two set files — this section explains them by domain.
@@ -144,9 +144,9 @@ returns bool). `quoteString()` → `quote()`. The legacy `mysql_*` / `mysqli_*` 
 | Rule | Before → After | Notes |
 |---|---|---|
 | `MysqlFunctionToXoopsDbRector` | `mysql_query("SELECT …")` → `$GLOBALS['xoopsDB']->query(…)`; `mysql_query("UPDATE …")` → `…->exec(…)`; `mysqli_error($link)` → `…->error()` | Routes `*_query` to `query`/`exec` by the **SQL keyword**; drops the `$link` arg for connection-first `mysqli_*`. |
-| `QueryFToQueryOrExecRector` | `$db->queryF("SELECT …")` → `$db->query(…)`; `$db->queryF("DELETE …")` → `$db->exec(…)` | Same keyword routing for explicit `queryF()`. A flat `queryF`→`exec` would break SELECTs. |
+| `QueryFToQueryOrExecRector` | `$db->queryF("SELECT …")` → `$db->query(…)`; `$db->queryF('DELETE FROM ' . $db->prefix('x'))` → `$db->exec(…)` | Same keyword routing for explicit `queryF()`, read through concatenation, interpolation, `sprintf()` and `$sql` assignments in the same scope. SQL it cannot classify stays `queryF()`. A flat `queryF`→`exec` would break SELECTs. |
 | `MysqlSelectDbToXoopsDbRector` | `mysql_select_db($n)` → `mysqli_select_db($GLOBALS['xoopsDB']->conn, $n)` | Fixes a removed PHP-7 function. |
-| `HandlerConstructorDbTypeRector` | `function __construct($db)` → `function __construct(\XoopsDatabase $db)` | **Only** on classes extending `XoopsPersistableObjectHandler`/`XoopsObjectHandler` (matches the parent signature). |
+| `HandlerConstructorDbTypeRector` | `function __construct($db)` → `function __construct(\XoopsDatabase $db)`; `$db = null` → `?\XoopsDatabase $db = null` | **Only** on classes extending `XoopsPersistableObjectHandler`/`XoopsObjectHandler` (matches the parent signature). |
 | built-in `RenameMethodRector` (typed) | `XoopsMySQLDatabase`/`XoopsDatabase::quoteString()` → `quote()`; `XoopsObject::makeTareaData4Show()` → `displayTarea()` | Configured in the set. |
 
 The SQL keyword classification is shared via the `Xoops\Rector\Support\SqlKeywordDetector` trait.
@@ -162,7 +162,7 @@ The SQL keyword classification is shared via the `Xoops\Rector\Support\SqlKeywor
 | `RemoveFuncCallRector` *(configurable)* | drops statement-level `mt_srand()` / `imagedestroy()` |
 | `DropReferenceFromAssignmentRector` | `$x =& foo()` / `=& new` / `=& Class::m()` → `$x = …` (call/`new` RHS only) |
 | `StaticStringCallableToArrayRector` | `'static::m'` → `[static::class, 'm']` (PHP 8.5) |
-| `AddAllowedClassesToUnserializeRector` | `unserialize($x)` → `unserialize($x, ['allowed_classes' => false])` |
+| `AddAllowedClassesToUnserializeRector` | `unserialize($x)` → `unserialize($x, ['allowed_classes' => false])`, only where the result is used solely in `is_array()` and truthiness tests (a stored object, even inside an array or as an `ArrayObject`, would come back as `__PHP_Incomplete_Class`) |
 | `BooleanLiteralStrictComparisonRector` | `== true/false/null` → `=== …` (both directions) |
 | built-in `MultiDirnameRector` | `dirname(dirname(dirname(__DIR__)))` → `dirname(__DIR__, 3)` |
 | built-in `AbsolutizeRequireAndIncludePathRector` | `require './foo.php'` → `require __DIR__ . '/foo.php'` |
@@ -172,12 +172,12 @@ The SQL keyword classification is shared via the `Xoops\Rector\Support\SqlKeywor
 | Rule | Before → After |
 |---|---|
 | `GlobalXoopsOptionRector` | `$xoopsOption['template_main'] = …` → `$GLOBALS['xoopsOption']['template_main'] = …` |
-| `KernelIncludePathRector` | moved kernel include paths: `class/xoopsobject.php`→`kernel/object.php`, `class/xoopsmodule.php`→`kernel/module.php` (include paths only) |
+| `KernelIncludePathRector` | deprecated `class/` stubs: `class/xoopsobject.php`→`kernel/object.php`, `class/xoopsmodule.php`→`kernel/module.php`, `class/xoopsuser.php`→`kernel/user.php`, `class/mimetypes.inc.php`→`include/mimetypes.inc.php` (core-rooted paths only: `XOOPS_ROOT_PATH . '…'`, or `path('…')` on `$xoops` / `$GLOBALS['xoops']` / `Xoops::getInstance()`) |
 | `NewModuleAdminToXmfRector` | `new ModuleAdmin()` → `\Xmf\Module\Admin::getInstance()` |
 | built-in `RenameFunctionRector` | `xoops_gethandler`→`xoops_getHandler`, `xoops_getmodulehandler`→`xoops_getModuleHandler`, `set_errorHandler`→`set_error_handler`, `restore_errorHandler`→`restore_error_handler`, `set_exceptionHandler`→`set_exception_handler` |
-| built-in `FuncCallToStaticCallRector` | `xoops_refcheck()`→`XoopsSecurity::checkReferer()`, `xoops_getLinkedUnameFromId()`→`XoopsUserUtility::getUnameFromId()` |
-| built-in `RenameStaticMethodRector` | `Database::getInstance()`→`XoopsDatabaseFactory::getDatabaseConnection()` |
-| built-in `FunctionArgumentDefaultValueReplacerRector` | `xoops_load('cache')`→`xoops_load('xoopscache')` |
+| `LegacyCoreCallRector` | `xoops_refcheck()`→`$GLOBALS['xoopsSecurity']->checkReferer()`, `Database::getInstance()`→`\XoopsDatabaseFactory::getDatabaseConnection()` |
+| `GetLinkedUnameFromIdRector` | `xoops_getLinkedUnameFromId($uid)`→`\XoopsUserUtility::getUnameFromId($uid, false, true)` after an inserted `\xoops_load('XoopsUserUtility');`, only when the call is the whole statement value (the statement, an assignment's right side, a single `echo` argument or the `return` value) |
+| `XoopsLoadAliasRector` | `xoops_load('cache')`→`xoops_load('xoopscache')`, and the other seven short names the core maps (`uploader`, `utility`, `captcha`, `file`, `model`, `calendar`, `userutility`); only for the `core`/`class` types |
 
 ### 3.4 MyTextSanitizer & Smarty (method renames)
 

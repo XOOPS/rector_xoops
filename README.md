@@ -79,7 +79,7 @@ the XOOPS rules even when invoked by a Rector binary installed elsewhere in the 
 
 ## What it does
 
-`xoops/rector-xoops` ships **22 custom rules** plus several configured built-in
+`xoops/rector-xoops` ships **25 custom rules** plus several configured built-in
 Rector rules, organised into two sets. The set is PHP-level-agnostic — your
 `rector.php` picks the PHP target (see *Install* above).
 
@@ -89,6 +89,13 @@ Rector rules, organised into two sets. The set is PHP-level-agnostic — your
   `unserialize` hardening, …), XOOPS framework API (`new ModuleAdmin()`→
   `\Xmf\Module\Admin`, kernel include paths, handler/function renames), and
   MyTextSanitizer + **Smarty 2→4** PHP-API renames.
+
+  > **Minimum XOOPS core: 2.5.12.** The default set writes `exec()`, which XOOPS added in
+  > 2.5.12 (`isResultSet()` came in 2.5.11). On an older core `exec()` is a call to an
+  > undefined method, a fatal error on every page that uses it. For a module that must still
+  > run on 2.5.11 or earlier, skip `QueryFToQueryOrExecRector` and `MysqlFunctionToXoopsDbRector`
+  > in your `rector.php` (`->withSkip([...])`).
+
 - **`XoopsSetList::XOOPS_RISKY`** (opt-in, behaviour-changing — review every diff) —
   `$_SERVER`→`\Xmf\Request`, and the receiver-aware `$myts` escaping/slashes rewrites.
 
@@ -112,7 +119,7 @@ behaviour-preserving when the return value is captured), and the future Smarty 4
 ```
 composer.json                 package + PSR-4 autoload ("Xoops\Rector\\" => src/)
 src/Set/XoopsSetList.php       XoopsSetList::XOOPS → config/sets/xoops.php
-src/Rules/*.php                the 22 custom rule classes (one per file, Xoops\Rector\Rules\*)
+src/Rules/*.php                the 25 custom rule classes (one per file, Xoops\Rector\Rules\*)
 src/Support/*.php              shared detector traits (SqlKeywordDetector, MytsReceiverDetector)
 config/sets/xoops.php          the reusable rule set (no paths/PHP-sets)
 rector-xoops.php              standalone full-sweep config (php84 + example paths)

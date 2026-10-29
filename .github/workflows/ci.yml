@@ -42,6 +42,9 @@ jobs:
       - name: PHPStan
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=512M
 
+      - name: PHPUnit (rule fixtures)
+        run: vendor/bin/phpunit
+
       - name: Smoke test — rule set loads and rules are autoloadable
         run: |
           php -r '
@@ -63,6 +66,9 @@ jobs:
               "Xoops\\Rector\\Rules\\GetMagicQuotesGpcToFalseRector",
               "Xoops\\Rector\\Rules\\KernelIncludePathRector",
               "Xoops\\Rector\\Rules\\UniqidMtRandStrictRector",
+              "Xoops\\Rector\\Rules\\XoopsLoadAliasRector",
+              "Xoops\\Rector\\Rules\\LegacyCoreCallRector",
+              "Xoops\\Rector\\Rules\\GetLinkedUnameFromIdRector",
               "Xoops\\Rector\\Rules\\MysqlSelectDbToXoopsDbRector",
               "Xoops\\Rector\\Rules\\HandlerConstructorDbTypeRector",
               "Xoops\\Rector\\Rules\\ServerSuperglobalToXmfRequestRector",

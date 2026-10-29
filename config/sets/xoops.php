@@ -14,25 +14,21 @@ declare(strict_types=1);
  * @license GPL-2.0-or-later
  */
 
-use Rector\Arguments\Rector\FuncCall\FunctionArgumentDefaultValueReplacerRector;
-use Rector\Arguments\ValueObject\ReplaceFuncCallArgumentDefaultValue;
 use Rector\CodeQuality\Rector\Include_\AbsolutizeRequireAndIncludePathRector;
 use Rector\Config\RectorConfig;
 use Rector\Php70\Rector\FuncCall\MultiDirnameRector;
 use Rector\Renaming\Rector\FuncCall\RenameFunctionRector;
 use Rector\Renaming\Rector\MethodCall\RenameMethodRector;
-use Rector\Renaming\Rector\StaticCall\RenameStaticMethodRector;
 use Rector\Renaming\ValueObject\MethodCallRename;
-use Rector\Renaming\ValueObject\RenameStaticMethod;
-use Rector\Transform\Rector\FuncCall\FuncCallToStaticCallRector;
-use Rector\Transform\ValueObject\FuncCallToStaticCall;
 use Xoops\Rector\Rules\AddAllowedClassesToUnserializeRector;
 use Xoops\Rector\Rules\BooleanLiteralStrictComparisonRector;
 use Xoops\Rector\Rules\DropReferenceFromAssignmentRector;
+use Xoops\Rector\Rules\GetLinkedUnameFromIdRector;
 use Xoops\Rector\Rules\GetMagicQuotesGpcToFalseRector;
 use Xoops\Rector\Rules\GlobalXoopsOptionRector;
 use Xoops\Rector\Rules\HandlerConstructorDbTypeRector;
 use Xoops\Rector\Rules\KernelIncludePathRector;
+use Xoops\Rector\Rules\LegacyCoreCallRector;
 use Xoops\Rector\Rules\MysqlFunctionToXoopsDbRector;
 use Xoops\Rector\Rules\MysqlSelectDbToXoopsDbRector;
 use Xoops\Rector\Rules\NewModuleAdminToXmfRector;
@@ -44,6 +40,7 @@ use Xoops\Rector\Rules\RenameMethodWithAddedFirstArgRector;
 use Xoops\Rector\Rules\SessionIsRegisteredToIssetRector;
 use Xoops\Rector\Rules\StaticStringCallableToArrayRector;
 use Xoops\Rector\Rules\UniqidMtRandStrictRector;
+use Xoops\Rector\Rules\XoopsLoadAliasRector;
 
 return static function (RectorConfig $rectorConfig): void {
     // Non-configurable rules.
@@ -66,6 +63,9 @@ return static function (RectorConfig $rectorConfig): void {
         GetMagicQuotesGpcToFalseRector::class,
         KernelIncludePathRector::class,
         UniqidMtRandStrictRector::class,
+        XoopsLoadAliasRector::class, // xoops_load('cache') → 'xoopscache' (core/class types only)
+        LegacyCoreCallRector::class, // xoops_refcheck(), Database::getInstance()
+        GetLinkedUnameFromIdRector::class, // xoops_getLinkedUnameFromId() + xoops_load()
         // P1 — behaviour-preserving (fix removed API / type-only).
         MysqlSelectDbToXoopsDbRector::class,
         HandlerConstructorDbTypeRector::class,
@@ -87,22 +87,6 @@ return static function (RectorConfig $rectorConfig): void {
         'set_exceptionHandler' => 'set_exception_handler',
         'xoops_gethandler' => 'xoops_getHandler',
         'xoops_getmodulehandler' => 'xoops_getModuleHandler',
-    ]);
-
-    // Function-to-static-method conversions.
-    $rectorConfig->ruleWithConfiguration(FuncCallToStaticCallRector::class, [
-        new FuncCallToStaticCall('xoops_refcheck', 'XoopsSecurity', 'checkReferer'),
-        new FuncCallToStaticCall('xoops_getLinkedUnameFromId', 'XoopsUserUtility', 'getUnameFromId'),
-    ]);
-
-    // Static-method renames.
-    $rectorConfig->ruleWithConfiguration(RenameStaticMethodRector::class, [
-        new RenameStaticMethod('Database', 'getInstance', 'XoopsDatabaseFactory', 'getDatabaseConnection'),
-    ]);
-
-    // Argument-value renames: xoops_load('cache') → xoops_load('xoopscache').
-    $rectorConfig->ruleWithConfiguration(FunctionArgumentDefaultValueReplacerRector::class, [
-        new ReplaceFuncCallArgumentDefaultValue('xoops_load', 0, 'cache', 'xoopscache'),
     ]);
 
     // Statement-level removal of deprecated no-op calls.

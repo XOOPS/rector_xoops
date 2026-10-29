@@ -5,6 +5,52 @@ All notable changes to `xoops/rector-xoops` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `QueryFToQueryOrExecRector` rewrote every write it could not read as `query()`, which throws
+  "query() called with a mutating statement" on 2.7. The keyword is now read through concatenation
+  (`'DELETE FROM ' . $db->prefix('x')`), interpolation (`"UPDATE {$t} …"`), `sprintf()` and the
+  `$sql` variable's assignments before the call in the same function or script; a call whose SQL
+  cannot be classified is left as `queryF()`: a parameter, `global`, `foreach` or reference variable,
+  a variable passed to another call (it may be taken by reference), a write after the call, an arrow function, or a literal that may stop inside the keyword
+  (`'S' . 'ELECT …'`). Reads are the core's own set (`SELECT|WITH|SHOW|DESCRIBE|EXPLAIN`),
+  so `SET`, `OPTIMIZE` … go to `exec()` exactly as the core routes them. `MysqlFunctionToXoopsDbRector`
+  uses the same classifier.
+- `AddAllowedClassesToUnserializeRector` added `['allowed_classes' => false]` to every call, which
+  turns a stored object (a cached `CriteriaCompo`, a serialized `XoopsObject`) into
+  `__PHP_Incomplete_Class`. It now rewrites only a call whose result is used solely in `is_array()`
+  and truthiness/`false`/`null` tests. An array can hold objects and `count()`, `isset($x['k'])` and
+  `array_keys()` also take a serialized `ArrayObject`, so any other use leaves the call alone; the
+  rule now fires rarely by design.
+- `HandlerConstructorDbTypeRector` typed `$db = null` as `\XoopsDatabase`, an implicitly nullable
+  type deprecated in PHP 8.4; it now writes `?\XoopsDatabase`.
+- `KernelIncludePathRector` rewrote the path inside any string, including a module's own
+  `__DIR__ . '/class/…'`. It now rewrites only core-rooted paths (`XOOPS_ROOT_PATH . '…'`, and
+  `path('…')` on `$xoops`, `$GLOBALS['xoops']` or `Xoops::getInstance()`), and covers the two other forwarding stubs: `class/xoopsuser.php` →
+  `kernel/user.php`, `class/mimetypes.inc.php` → `include/mimetypes.inc.php`.
+
+### Added
+
+- `XoopsLoadAliasRector`: all eight deprecated `xoops_load()` short names the core maps
+  (`cache`, `uploader`, `utility`, `captcha`, `file`, `model`, `calendar`, `userutility`), only for
+  the `core`/`class` types and positional arguments. Replaces the built-in `xoops_load('cache')` configuration, which also
+  rewrote `xoops_load('cache', 'mymodule')`.
+- `LegacyCoreCallRector` and `GetLinkedUnameFromIdRector` replace the built-in
+  `FuncCallToStaticCallRector` and `RenameStaticMethodRector` configurations. Rector 2.8 deprecated
+  those rules (and `FunctionArgumentDefaultValueReplacerRector`) and no longer runs them, so the set
+  printed deprecation warnings and silently skipped the rewrites. The old mappings were also wrong:
+  `xoops_refcheck()` became a static call to the instance method `XoopsSecurity::checkReferer()`, a
+  fatal error, and `xoops_getLinkedUnameFromId()` lost its `$linked = true` and the
+  `xoops_load('XoopsUserUtility')` the removed function did.
+- PHPUnit fixture tests for the custom rules (`composer test`, also run by `composer qa` and CI).
+- README: the default set needs XOOPS 2.5.12 or later (`exec()`).
+
+### Changed
+
+- Requires `rector/rector` `^2.4` (file-level scope via `FileNode`).
+
 ## [1.0.0-alpha1] - 2026-06-08
 
 First (alpha) release — a Composer-installable Rector extension that automates the safe, mechanical
