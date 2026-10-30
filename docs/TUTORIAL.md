@@ -54,7 +54,7 @@ module. Require both (dev only):
 composer require --dev rector/rector "xoops/rector-xoops:^1.0@alpha"
 ```
 
-> **Pre-release:** the only published version is `1.0.0-alpha1`, so the `@alpha` stability flag is
+> **Pre-release:** the latest published version is `1.0.0-alpha2`, so the `@alpha` stability flag is
 > required (it lifts `minimum-stability` for this package only — your project config is untouched).
 > Once a stable `1.0.0` ships, drop it: `composer require --dev xoops/rector-xoops`.
 

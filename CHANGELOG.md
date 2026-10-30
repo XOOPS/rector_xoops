@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0-alpha2] - 2026-10-29
+
 ### Fixed
 
 - `QueryFToQueryOrExecRector` rewrote every write it could not read as `query()`, which throws
@@ -105,4 +107,6 @@ across two sets.
   cross-checked against independent reviews. Template-side (`.tpl`) Smarty changes are out of scope —
   this tool is PHP-AST only.
 
+[Unreleased]: https://github.com/xoops/rector_xoops/compare/v1.0.0-alpha2...HEAD
+[1.0.0-alpha2]: https://github.com/xoops/rector_xoops/releases/tag/v1.0.0-alpha2
 [1.0.0-alpha1]: https://github.com/xoops/rector_xoops/releases/tag/v1.0.0-alpha1
